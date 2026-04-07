@@ -26,7 +26,7 @@ export function Hero() {
           transition={{ duration: shouldReduce ? 0 : 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-2xl text-left"
         >
-          <h1 className="text-[6.5vw] leading-[0.88] font-black uppercase tracking-tighter mix-blend-difference">
+          <h1 className="text-5xl md:text-7xl lg:text-8xl leading-[0.85] lg:leading-[0.85] font-black uppercase tracking-tighter mix-blend-difference">
             Do primeiro
             <br />
             <span className="text-[var(--color-b2b-red)]">clique ao fechamento.</span>
