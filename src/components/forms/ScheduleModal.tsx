@@ -4,7 +4,9 @@ import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ArrowRight, Loader2 } from "lucide-react";
+import { X, ArrowRight, Loader2, Check } from "lucide-react";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const schema = z.object({
   nome: z.string().min(2, "Nome muito curto"),
@@ -22,16 +24,42 @@ interface ScheduleModalProps {
 }
 
 export function ScheduleModal({ isOpen, onClose }: ScheduleModalProps) {
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isSubmitLoading, setIsSubmitLoading] = useState(false);
   const { register, handleSubmit, setFocus, formState: { errors, isSubmitting }, reset } = useForm<FormData>({
     resolver: zodResolver(schema)
   });
 
-  const onSubmit = (data: FormData) => {
-    const msg = `*[LEAD B2B — CREATE]*%0A*Nome:* ${data.nome}%0A*Email:* ${data.email}%0A*Telefone:* ${data.telefone}%0A*Empresa:* ${data.empresa}%0A*Contexto:* ${data.descricao}`;
-    // Substitua pelo número real do BDR: 5511999999999
-    window.open(`https://wa.me/5511999999999?text=${msg}`, "_blank");
-    reset();
-    onClose();
+  const onSubmit = async (data: FormData) => {
+    setIsSubmitLoading(true);
+    try {
+      const { error } = await supabase.from("site-create").insert({
+        nome: data.nome,
+        email: data.email,
+        telefone: data.telefone,
+        empresa: data.empresa,
+        descricao: data.descricao
+      });
+
+      if (error) {
+        console.error("Erro ao inserir:", error);
+        alert("Ocorreu um erro. Tente novamente.");
+        return;
+      }
+
+      setIsSuccess(true);
+      reset();
+
+      setTimeout(() => {
+        setIsSuccess(false);
+        onClose();
+      }, 3000);
+      
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitLoading(false);
+    }
   };
 
   const onError = (errs: FieldErrors<FormData>) => {
@@ -75,6 +103,19 @@ export function ScheduleModal({ isOpen, onClose }: ScheduleModalProps) {
             </div>
 
             {/* Form */}
+            {isSuccess ? (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex-1 flex flex-col items-center justify-center p-8 text-center"
+              >
+                <div className="w-20 h-20 bg-[var(--color-b2b-onyx)] text-[var(--color-b2b-acid)] rounded-full flex items-center justify-center mb-6">
+                  <Check className="w-10 h-10" />
+                </div>
+                <h3 className="text-3xl font-black uppercase tracking-tighter mb-2">Sucesso!</h3>
+                <p className="font-mono text-[#666] text-sm">Seus dados foram enviados. Nossa equipe entrará em contato em breve.</p>
+              </motion.div>
+            ) : (
             <form onSubmit={handleSubmit(onSubmit, onError)} className="flex flex-col gap-6 md:gap-8 p-6 md:p-8 flex-1">
               <div>
                 <input {...register("nome")} type="text" autoComplete="name" aria-label="Nome completo" placeholder="Nome completo *" className={inputClass} />
@@ -105,16 +146,17 @@ export function ScheduleModal({ isOpen, onClose }: ScheduleModalProps) {
 
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isSubmitLoading}
                 className="mt-auto w-full flex items-center justify-center gap-3 bg-[var(--color-b2b-onyx)] text-[var(--color-b2b-acid)] py-5 font-black uppercase text-lg tracking-tighter hover:bg-[var(--color-b2b-red)] transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Enviar para WhatsApp <ArrowRight className="w-5 h-5" /></>}
+                {isSubmitting || isSubmitLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Enviar dados <ArrowRight className="w-5 h-5" /></>}
               </button>
 
               <p className="font-mono text-xs text-[#888] text-center">
-                Ao enviar, você será redirecionado para o WhatsApp. Resposta em até 24h úteis.
+                Ao enviar, seus dados serão registrados em nosso sistema. Resposta em até 24h úteis.
               </p>
             </form>
+            )}
           </motion.div>
         </>
       )}

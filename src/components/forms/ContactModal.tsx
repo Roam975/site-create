@@ -5,6 +5,8 @@ import { X } from "lucide-react";
 import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const formSchema = z.object({
   name: z.string().min(2, "Nome é obrigatório"),
@@ -16,10 +18,14 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 export function ContactModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const {
     register,
     handleSubmit,
     setFocus,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -30,15 +36,36 @@ export function ContactModal({ isOpen, onClose }: { isOpen: boolean; onClose: ()
     if (firstKey) setFocus(firstKey);
   };
 
-  const onSubmit = (data: FormData) => {
-    // Format message for WhatsApp
-    const message = `*Novo Lead B2B - Landing Page*%0A%0A*Nome:* ${data.name}%0A*E-mail:* ${data.email}%0A*Contato:* ${data.phone}%0A%0A*Demanda de Automação:*%0A${data.description}`;
-    
-    // Replace with actual BDR phone number
-    const wameUrl = `https://wa.me/5511999999999?text=${message}`;
-    
-    // Redirect to wa.me (BDR/SDR loop integration)
-    window.open(wameUrl, "_blank");
+  const onSubmit = async (data: FormData) => {
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.from("site-create").insert({
+        nome: data.name,
+        email: data.email,
+        telefone: data.phone,
+        descricao: data.description,
+        empresa: null // ContactModal não tem empresa
+      });
+
+      if (error) {
+        console.error("Erro ao inserir:", error);
+        alert("Ocorreu um erro ao enviar. Tente novamente.");
+        return;
+      }
+
+      setIsSuccess(true);
+      reset();
+      
+      setTimeout(() => {
+        setIsSuccess(false);
+        onClose();
+      }, 3000);
+      
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -81,6 +108,21 @@ export function ContactModal({ isOpen, onClose }: { isOpen: boolean; onClose: ()
               </p>
             </div>
 
+            {isSuccess ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="py-12 text-center border border-[var(--color-b2b-red)]/30 bg-[#111]"
+              >
+                <div className="w-16 h-16 rounded-full bg-[var(--color-b2b-red)] mx-auto mb-6 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-black uppercase text-[var(--color-b2b-acid)] tracking-widest">Sucesso!</h3>
+                <p className="text-[#888] mt-2 block font-mono text-sm uppercase">Recebemos seus dados. Entraremos em contato em breve.</p>
+              </motion.div>
+            ) : (
             <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -139,12 +181,14 @@ export function ContactModal({ isOpen, onClose }: { isOpen: boolean; onClose: ()
 
               <button 
                 type="submit"
-                className="w-full bg-[var(--color-b2b-red)] text-[var(--color-b2b-acid)] py-4 uppercase font-bold tracking-widest hover:bg-[var(--color-b2b-acid)] hover:text-[var(--color-b2b-onyx)] transition-colors duration-300 relative group"
+                disabled={isSubmitting}
+                className="w-full bg-[var(--color-b2b-red)] text-[var(--color-b2b-acid)] py-4 uppercase font-bold tracking-widest hover:bg-[var(--color-b2b-acid)] hover:text-[var(--color-b2b-onyx)] transition-colors duration-300 relative group disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Engatar Automação
+                {isSubmitting ? "Enviando..." : "Engatar Automação"}
                 <div className="absolute top-0 right-0 w-2 h-2 bg-[var(--color-b2b-onyx)]" />
               </button>
             </form>
+            )}
           </motion.div>
         </motion.div>
       )}
