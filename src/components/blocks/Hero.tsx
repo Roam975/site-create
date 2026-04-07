@@ -19,7 +19,7 @@ export function Hero() {
       </div>
 
       {/* The Main Content */}
-      <div className="relative z-10 w-full md:w-[90%] h-full flex flex-col justify-center items-center px-8 md:px-16 pt-20 md:pt-0 md:justify-end md:pb-24 md:items-start border-b md:border-b-0 md:border-r border-[#333]">
+      <div className="relative z-10 w-full md:w-[90%] h-full flex flex-col justify-center items-center px-8 md:px-16 pt-20 md:pt-24 md:justify-center md:items-start border-b md:border-b-0 md:border-r border-[#333]">
         <motion.div
           initial={{ opacity: 0, y: shouldReduce ? 0 : 40 }}
           animate={{ opacity: 1, y: 0 }}
