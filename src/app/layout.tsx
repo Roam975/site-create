@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NoiseOverlay } from "@/components/ui/NoiseOverlay";
 import { Navbar } from "@/components/blocks/Navbar";
+import { VisitorTracker } from "@/components/analytics/VisitorTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({
         </a>
         <NoiseOverlay />
         <Navbar />
+        <VisitorTracker />
         {children}
       </body>
     </html>
