@@ -7,6 +7,21 @@ export async function onRequestPost(context: any) {
     // Cloudflare specific geo data
     const country = request.cf?.country || "Unknown";
     const city = request.cf?.city || "Unknown";
+    const region = request.cf?.region || "Unknown";
+    const latitude = request.cf?.latitude || null;
+    const longitude = request.cf?.longitude || null;
+    const timezone = request.cf?.timezone || "Unknown";
+    const as_organization = request.cf?.asOrganization || "Unknown";
+    const bot_score = request.cf?.botManagement?.score || null;
+    const tcp_rtt = request.cf?.clientTcpRtt || null;
+
+    const ua = request.headers.get("user-agent") || "";
+    let device_type = "Desktop";
+    if (/tablet|ipad|playbook|silk/i.test(ua)) {
+      device_type = "Tablet";
+    } else if (/mobile|iphone|ipod|android/i.test(ua)) {
+      device_type = "Mobile";
+    }
 
     const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
     const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -30,7 +45,15 @@ export async function onRequestPost(context: any) {
         path,
         referrer,
         country,
-        city
+        city,
+        region,
+        latitude,
+        longitude,
+        timezone,
+        as_organization,
+        device_type,
+        bot_score,
+        tcp_rtt
       })
     });
 
