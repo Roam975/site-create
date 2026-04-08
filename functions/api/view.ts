@@ -1,4 +1,4 @@
-export async function onRequestPost(context) {
+export async function onRequestPost(context: any) {
   const { request, env } = context;
   
   try {
@@ -8,7 +8,7 @@ export async function onRequestPost(context) {
     const country = request.cf?.country || "Unknown";
     const city = request.cf?.city || "Unknown";
 
-    const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
     const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -47,7 +47,7 @@ export async function onRequestPost(context) {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { 
+    return new Response(JSON.stringify({ error: (err as Error).message }), { 
       status: 500,
       headers: { "Content-Type": "application/json" }
     });

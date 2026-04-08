@@ -9,7 +9,7 @@ export function VisitorTracker() {
   useEffect(() => {
     const trackVisit = async () => {
       try {
-        const response = await fetch("/api/track", {
+        const response = await fetch("/api/view", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
