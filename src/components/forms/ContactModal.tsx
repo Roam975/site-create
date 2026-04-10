@@ -6,7 +6,6 @@ import { useForm, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 const formSchema = z.object({
   name: z.string().min(2, "Nome é obrigatório"),
@@ -39,18 +38,20 @@ export function ContactModal({ isOpen, onClose }: { isOpen: boolean; onClose: ()
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("site-create").insert({
-        nome: data.name,
-        email: data.email,
-        telefone: data.phone,
-        descricao: data.description,
-        empresa: null // ContactModal não tem empresa
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: data.name,
+          email: data.email,
+          telefone: data.phone,
+          descricao: data.description,
+          empresa: null
+        }),
       });
 
-      if (error) {
-        console.error("Erro ao inserir:", error);
-        alert("Ocorreu um erro ao enviar. Tente novamente.");
-        return;
+      if (!response.ok) {
+        throw new Error("Erro ao processar lead");
       }
 
       setIsSuccess(true);
@@ -63,6 +64,7 @@ export function ContactModal({ isOpen, onClose }: { isOpen: boolean; onClose: ()
       
     } catch (err) {
       console.error(err);
+      alert("Ocorreu um erro ao enviar. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }

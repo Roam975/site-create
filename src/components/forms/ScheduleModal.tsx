@@ -6,7 +6,6 @@ import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowRight, Loader2, Check } from "lucide-react";
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 
 const schema = z.object({
   nome: z.string().min(2, "Nome muito curto"),
@@ -33,18 +32,20 @@ export function ScheduleModal({ isOpen, onClose }: ScheduleModalProps) {
   const onSubmit = async (data: FormData) => {
     setIsSubmitLoading(true);
     try {
-      const { error } = await supabase.from("site-create").insert({
-        nome: data.nome,
-        email: data.email,
-        telefone: data.telefone,
-        empresa: data.empresa,
-        descricao: data.descricao
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nome: data.nome,
+          email: data.email,
+          telefone: data.telefone,
+          empresa: data.empresa,
+          descricao: data.descricao
+        }),
       });
 
-      if (error) {
-        console.error("Erro ao inserir:", error);
-        alert("Ocorreu um erro. Tente novamente.");
-        return;
+      if (!response.ok) {
+        throw new Error("Erro ao processar lead");
       }
 
       setIsSuccess(true);
@@ -57,6 +58,7 @@ export function ScheduleModal({ isOpen, onClose }: ScheduleModalProps) {
       
     } catch (err) {
       console.error(err);
+      alert("Ocorreu um erro ao enviar. Tente novamente.");
     } finally {
       setIsSubmitLoading(false);
     }
