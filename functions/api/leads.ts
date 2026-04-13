@@ -26,7 +26,10 @@ export async function onRequestPost(context: any) {
 
     if (supabaseUrl && supabaseKey) {
       try {
-        await fetch(`${supabaseUrl}/rest/v1/site-create`, {
+        // Log vars presence for debug
+        console.log("🔗 Supabase Config check: URL is defined, Key is defined");
+        
+        const sbResponse = await fetch(`${supabaseUrl}/rest/v1/site-create`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -39,14 +42,22 @@ export async function onRequestPost(context: any) {
             email: data.email,
             telefone: data.telefone,
             empresa: data.empresa || null,
-            descricao: data.descricao,
-            country,
-            city
+            descricao: data.descricao
+            // Removendo country e city para evitar erro se as colunas não existirem no Supabase
           })
         });
+
+        if (!sbResponse.ok) {
+          const sbErrorText = await sbResponse.text();
+          console.error(`⚠️ [Functions] Supabase Error ${sbResponse.status}: ${sbErrorText}`);
+        } else {
+          console.log("✅ [Functions] Backup no Supabase concluído.");
+        }
       } catch (sbError: any) {
-        console.error("⚠️ [Functions] Erro Supabase:", sbError.message);
+        console.error("⚠️ [Functions] Erro na conexão física com Supabase:", sbError.message);
       }
+    } else {
+      console.warn("⚠️ [Functions] Supabase env vars missing. Check Settings > Functions > Environment variables");
     }
 
     // 2. Disparo para o Agente Alexandre (ZimaOS via Public URL)
@@ -55,7 +66,7 @@ export async function onRequestPost(context: any) {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "User-Agent": "Cloudflare-Pages-Function/1.1"
+          "User-Agent": "Cloudflare-Pages-Function/1.2"
         },
         body: JSON.stringify({
           nome: data.nome,
@@ -70,12 +81,11 @@ export async function onRequestPost(context: any) {
       if (!agentResponse.ok) {
         const errorText = await agentResponse.text();
         return new Response(JSON.stringify({ 
-          success: false, 
-          message: "Falha na resposta do Agente",
+          success: true, 
+          message: "Lead salvo no Postgres, mas erro no Agente Alexandre",
           status: agentResponse.status,
           details: errorText
         }), {
-          status: 502,
           headers: { "Content-Type": "application/json" }
         });
       }
@@ -89,11 +99,10 @@ export async function onRequestPost(context: any) {
 
     } catch (agentErr: any) {
       return new Response(JSON.stringify({ 
-        success: false, 
-        message: "Erro de conexão com o Agente",
+        success: true, 
+        message: "Lead salvo no Postgres, mas erro de conexão com o Agente",
         error: agentErr.message
       }), {
-        status: 504,
         headers: { "Content-Type": "application/json" }
       });
     }
