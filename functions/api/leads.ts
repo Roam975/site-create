@@ -26,9 +26,6 @@ export async function onRequestPost(context: any) {
 
     if (supabaseUrl && supabaseKey) {
       try {
-        // Log vars presence for debug
-        console.log("🔗 Supabase Config check: URL is defined, Key is defined");
-        
         const sbResponse = await fetch(`${supabaseUrl}/rest/v1/site-create`, {
           method: "POST",
           headers: {
@@ -42,8 +39,10 @@ export async function onRequestPost(context: any) {
             email: data.email,
             telefone: data.telefone,
             empresa: data.empresa || null,
-            descricao: data.descricao
-            // Removendo country e city para evitar erro se as colunas não existirem no Supabase
+            descricao: data.descricao,
+            country,
+            city,
+            status: 'em_atendimento'
           })
         });
 
@@ -56,8 +55,6 @@ export async function onRequestPost(context: any) {
       } catch (sbError: any) {
         console.error("⚠️ [Functions] Erro na conexão física com Supabase:", sbError.message);
       }
-    } else {
-      console.warn("⚠️ [Functions] Supabase env vars missing. Check Settings > Functions > Environment variables");
     }
 
     // 2. Disparo para o Agente Alexandre (ZimaOS via Public URL)
@@ -66,7 +63,7 @@ export async function onRequestPost(context: any) {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "User-Agent": "Cloudflare-Pages-Function/1.2"
+          "User-Agent": "Cloudflare-Pages-Function/1.3"
         },
         body: JSON.stringify({
           nome: data.nome,
