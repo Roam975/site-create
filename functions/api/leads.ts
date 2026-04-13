@@ -2,14 +2,23 @@ export async function onRequestPost(context: any) {
   const { request, env } = context;
   
   try {
-    const data = await request.json();
+    let data: any;
+    try {
+      data = await request.json();
+    } catch (e) {
+      return new Response(JSON.stringify({ error: "Invalid JSON body", details: (e as Error).message }), { 
+        status: 400,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     const AGENTE_URL = env.AGENTE_URL || "https://agente.n8ndorhuan.store/new-lead";
 
     // Cloudflare specific geo data
     const country = request.cf?.country || "Unknown";
     const city = request.cf?.city || "Unknown";
 
-    console.log(`🚀 [Functions] Processando novo lead de ${city}, ${country}:`, data.email);
+    console.log(`🚀 [Functions] Processando novo lead: ${data.email || 'no-email'} from ${city}, ${country}`);
 
     // 1. Snapshot para o Supabase (Cloud Backup)
     const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
@@ -17,7 +26,7 @@ export async function onRequestPost(context: any) {
 
     if (supabaseUrl && supabaseKey) {
       try {
-        const response = await fetch(`${supabaseUrl}/rest/v1/site-create`, {
+        await fetch(`${supabaseUrl}/rest/v1/site-create`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -35,25 +44,18 @@ export async function onRequestPost(context: any) {
             city
           })
         });
-
-        if (!response.ok) {
-          console.error("⚠️ [Functions] Erro ao salvar no Supabase:", await response.text());
-        } else {
-          console.log("✅ [Functions] Backup no Supabase concluído.");
-        }
       } catch (sbError: any) {
-        console.error("⚠️ [Functions] Erro na conexão com Supabase:", sbError.message);
+        console.error("⚠️ [Functions] Erro Supabase:", sbError.message);
       }
     }
 
     // 2. Disparo para o Agente Alexandre (ZimaOS via Public URL)
     try {
-      console.log(`🔗 [Functions] Notificando Agente: ${AGENTE_URL}`);
       const agentResponse = await fetch(AGENTE_URL, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "User-Agent": "Cloudflare-Pages-Function/1.0"
+          "User-Agent": "Cloudflare-Pages-Function/1.1"
         },
         body: JSON.stringify({
           nome: data.nome,
@@ -67,10 +69,16 @@ export async function onRequestPost(context: any) {
 
       if (!agentResponse.ok) {
         const errorText = await agentResponse.text();
-        throw new Error(`Agent response status: ${agentResponse.status} - ${errorText}`);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          message: "Falha na resposta do Agente",
+          status: agentResponse.status,
+          details: errorText
+        }), {
+          status: 502,
+          headers: { "Content-Type": "application/json" }
+        });
       }
-      
-      console.log("✅ [Functions] Agente Alexandre notificado com sucesso.");
       
       return new Response(JSON.stringify({ 
         success: true, 
@@ -80,19 +88,18 @@ export async function onRequestPost(context: any) {
       });
 
     } catch (agentErr: any) {
-      console.error("❌ [Functions] Erro ao conectar com Agente Alexandre:", agentErr);
       return new Response(JSON.stringify({ 
-        success: true, 
-        message: "Lead salvo no Supabase, mas falhou ao notificar o Agente Alexandre.",
-        agent_error: agentErr.message || "Erro desconhecido na ponte do Cloudflare"
+        success: false, 
+        message: "Erro de conexão com o Agente",
+        error: agentErr.message
       }), {
+        status: 504,
         headers: { "Content-Type": "application/json" }
       });
     }
 
   } catch (error: any) {
-    console.error("🔥 [Functions] Erro crítico na API de Leads:", error);
-    return new Response(JSON.stringify({ success: false, error: error.message || "Internal Server Error" }), { 
+    return new Response(JSON.stringify({ error: error.message || "Internal Server Error" }), { 
       status: 500,
       headers: { "Content-Type": "application/json" }
     });
